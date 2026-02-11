@@ -26,12 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function toggleTheme() {
     const themeIcon = document.querySelector('.theme-icon');
-    
-    if (themeIcon.textContent === '🌙') {
-        themeIcon.textContent = '☀️';
-    } else {
-        themeIcon.textContent = '🌙';
-    }
+    themeIcon.textContent = themeIcon.textContent === '🌙' ? '☀️' : '🌙';
 }
 
 function switchTab(tabName) {
@@ -46,7 +41,7 @@ function switchTab(tabName) {
 }
 
 function loadWordBank() {
-    const stored = localStorage.getItem('wordBank');
+    const stored = localStorage.getItem('devopsWords');
     if (stored) {
         wordBank = JSON.parse(stored);
     } else {
@@ -95,6 +90,16 @@ function addWord() {
     const input = document.getElementById('newWord');
     const word = input.value.trim().toUpperCase();
 
+    // Validation: must be non-empty, letters only, no duplicates
+    if (!word || !/^[A-Z]+$/.test(word)) {
+        alert('Invalid word. Use only uppercase letters A-Z.');
+        return;
+    }
+    if (wordBank.includes(word)) {
+        alert('Duplicate word not allowed.');
+        return;
+    }
+
     wordBank.push(word);
     input.value = '';
     saveWordBank();
@@ -104,7 +109,16 @@ function addWord() {
 function editWord(index) {
     const newWord = prompt('Edit word:', wordBank[index]);
     if (newWord) {
-        wordBank.splice(index, 1);
+        const formattedWord = newWord.trim().toUpperCase();
+        if (!/^[A-Z]+$/.test(formattedWord)) {
+            alert('Invalid word. Use only uppercase letters A-Z.');
+            return;
+        }
+        if (wordBank.includes(formattedWord)) {
+            alert('Duplicate word not allowed.');
+            return;
+        }
+        wordBank[index] = formattedWord; // ✅ Replace instead of delete
         saveWordBank();
         displayWordBank();
     }
@@ -112,6 +126,7 @@ function editWord(index) {
 
 function deleteWord(index) {
     if (confirm('Are you sure you want to delete this word?')) {
+        wordBank.splice(index, 1); // ✅ Actually remove the word
         saveWordBank();
         displayWordBank();
     }
@@ -136,8 +151,17 @@ function startGame() {
     const p1Name = document.getElementById('player1Name').value.trim();
     const p2Name = document.getElementById('player2Name').value.trim();
     
-    gameState.player1.name = p1Name || 'Player 1';
-    gameState.player2.name = p2Name || 'Player 2';
+    if (!p1Name || !p2Name) {
+        alert('Both player names are required.');
+        return;
+    }
+    if (p1Name === p2Name) {
+        alert('Player names must be different.');
+        return;
+    }
+
+    gameState.player1.name = p1Name;
+    gameState.player2.name = p2Name;
     
     document.getElementById('player1Display').textContent = gameState.player1.name;
     document.getElementById('player2Display').textContent = gameState.player2.name;
@@ -156,6 +180,7 @@ function nextRound() {
     gameState.guessedLetters = [];
     gameState.wrongGuesses = 0;
     gameState.gameActive = true;
+    gameState.maxWrong = 6; // ✅ Lives reset correctly
     
     const randomIndex = Math.floor(Math.random() * wordBank.length);
     gameState.currentWord = wordBank[randomIndex];
@@ -214,23 +239,21 @@ function updateWrongLetters() {
     if (wrong.length === 0) {
         wrongLettersDiv.textContent = 'None yet';
     } else {
-        wrongLettersDiv.textContent = gameState.guessedLetters.join(', ');
+        wrongLettersDiv.textContent = wrong.join(', ');
     }
 }
 
 function updateLives() {
-    const livesLeft = gameState.maxWrong - gameState.wrongGuesses + 1;
-    document.getElementById('livesLeft').textContent = livesLeft;
+    const livesLeft = gameState.maxWrong - gameState.wrongGuesses;
+    document.getElementById('livesLeft').textContent = `Lives Remaining: ${livesLeft} / ${gameState.maxWrong}`;
 }
 
 function updateHangman() {
     const parts = ['head', 'body', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
-    
-    const wrongOrder = ['head', 'leftArm', 'rightArm', 'body', 'leftLeg', 'rightLeg'];
     const partIndex = gameState.wrongGuesses - 1;
     
-    if (partIndex >= 0 && partIndex < wrongOrder.length) {
-        const partToShow = wrongOrder[partIndex];
+    if (partIndex >= 0 && partIndex < parts.length) {
+        const partToShow = parts[partIndex];
         document.getElementById(partToShow).style.display = 'block';
     }
 }
@@ -265,54 +288,60 @@ function updateCurrentPlayer() {
     }
 }
 
-function checkGameStatus() {
-    const allLettersGuessed = [...gameState.currentWord].every(letter =>
-        gameState.guessedLetters.includes(letter)
-    );
-    
-    if (allLettersGuessed) {
-        gameWon();
-        return;
+    function checkGameStatus() {
+        const allLettersGuessed = [...gameState.currentWord].every(letter =>
+            gameState.guessedLetters.includes(letter)
+        );
+        
+        if (allLettersGuessed) {
+            gameWon();
+            return;
+        }
+        
+        if (gameState.wrongGuesses >= gameState.maxWrong) {
+            gameLost();
+            return;
+        }
     }
     
-    if (gameState.wrongGuesses >= gameState.maxWrong) {
-        gameLost();
-        return;
+    function gameWon() {
+        gameState.gameActive = false;
+        
+        // ✅ Correct score assignment
+        if (gameState.currentPlayer === 1) {
+            gameState.player1.score += 10;
+            document.getElementById('score1').textContent = gameState.player1.score;
+        } else {
+            gameState.player2.score += 10;
+            document.getElementById('score2').textContent = gameState.player2.score;
+        }
+        
+        const statusDiv = document.getElementById('gameStatus');
+        const statusMsg = document.getElementById('statusMessage');
+        
+        const winnerName = gameState.currentPlayer === 1 ? 
+            gameState.player1.name : gameState.player2.name;
+        
+        statusMsg.textContent = `🎉 ${winnerName} won! The word was: ${gameState.currentWord}`;
+        statusDiv.classList.add('show', 'winner');
+        
+        // Switch player for next round
+        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
     }
-}
-
-function gameWon() {
-    gameState.gameActive = false;
     
-    if (gameState.currentPlayer === 1) {
-        gameState.player2.score += 10;
-        document.getElementById('score2').textContent = gameState.player2.score;
-    } else {
-        gameState.player1.score += 10;
-        document.getElementById('score1').textContent = gameState.player1.score;
+    function gameLost() {
+        gameState.gameActive = false;
+        
+        const statusDiv = document.getElementById('gameStatus');
+        const statusMsg = document.getElementById('statusMessage');
+        
+        const currentPlayerName = gameState.currentPlayer === 1 ? 
+            gameState.player1.name : gameState.player2.name;
+        
+        statusMsg.textContent = `😢 ${currentPlayerName} lost! The word was: ${gameState.currentWord}`;
+        statusDiv.classList.add('show', 'loser');
+        
+        // Switch player for next round
+        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
     }
     
-    const statusDiv = document.getElementById('gameStatus');
-    const statusMsg = document.getElementById('statusMessage');
-    
-    const winnerName = gameState.currentPlayer === 1 ? 
-        gameState.player2.name : gameState.player1.name;
-    
-    statusMsg.textContent = `🎉 ${winnerName} won! The word was: ${gameState.currentWord}`;
-    statusDiv.classList.add('show', 'winner');
-}
-
-function gameLost() {
-    gameState.gameActive = false;
-    
-    const statusDiv = document.getElementById('gameStatus');
-    const statusMsg = document.getElementById('statusMessage');
-    
-    const currentPlayerName = gameState.currentPlayer === 1 ? 
-        gameState.player1.name : gameState.player2.name;
-    
-    statusMsg.textContent = `😢 ${currentPlayerName} lost! The word was: ${gameState.currentWord}`;
-    statusDiv.classList.add('show', 'loser');
-    
-    gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-}
