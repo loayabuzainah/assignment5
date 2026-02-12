@@ -124,6 +124,7 @@ function editWord(index) {
     }
 }
 
+
 function deleteWord(index) {
     if (confirm('Are you sure you want to delete this word?')) {
         wordBank.splice(index, 1); // ✅ Actually remove the word
