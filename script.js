@@ -156,8 +156,20 @@ function startGame() {
         alert('Both player names are required.');
         return;
     }
-    if (p1Name === p2Name) {
+
+    // ✅ Prevent duplicate names (case-insensitive)
+    if (p1Name.toUpperCase() === p2Name.toUpperCase()) {
         alert('Player names must be different.');
+        return;
+    }
+
+    // ✅ Prevent reusing existing names
+    if (gameState.player1 && gameState.player1.name.toUpperCase() === p1Name.toUpperCase()) {
+        alert('Duplicate player name not allowed.');
+        return;
+    }
+    if (gameState.player2 && gameState.player2.name.toUpperCase() === p2Name.toUpperCase()) {
+        alert('Duplicate player name not allowed.');
         return;
     }
 
