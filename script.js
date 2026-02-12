@@ -104,11 +104,21 @@ function addWord() {
 function editWord(index) {
     const newWord = prompt('Edit word:', wordBank[index]);
     if (newWord) {
-        wordBank.splice(index, 1);
+        const formattedWord = newWord.trim().toUpperCase();
+        if (!/^[A-Z]+$/.test(formattedWord)) {
+            alert('Invalid word. Use only uppercase letters A-Z.');
+            return;
+        }
+        if (wordBank.includes(formattedWord)) {
+            alert('Duplicate word not allowed.');
+            return;
+        }
+        wordBank[index] = formattedWord; // ✅ replace instead of delete
         saveWordBank();
         displayWordBank();
     }
 }
+
 
 function deleteWord(index) {
     if (confirm('Are you sure you want to delete this word?')) {
