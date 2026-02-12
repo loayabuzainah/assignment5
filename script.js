@@ -152,6 +152,31 @@ function nextRound() {
         alert('No words in the word bank! Add some words first.');
         return;
     }
+
+    gameState.guessedLetters = [];
+    gameState.wrongGuesses = 0;      // ✅ reset wrong guesses
+    gameState.gameActive = true;
+    gameState.maxWrong = 6;          // ✅ ensure max lives is 6
+
+    const randomIndex = Math.floor(Math.random() * wordBank.length);
+    gameState.currentWord = wordBank[randomIndex];
+
+    document.getElementById('gameStatus').classList.remove('show');
+    document.getElementById('gameStatus').className = 'game-status';
+    resetHangman();
+    resetKeyboard();
+    updateWordDisplay();
+    updateWrongLetters();
+    updateLives();                   // ✅ lives show 6/6 at start
+    updateCurrentPlayer();
+}
+
+function updateLives() {
+    const livesLeft = gameState.maxWrong - gameState.wrongGuesses;
+    document.getElementById('livesLeft').textContent = 
+        `Lives Remaining: ${livesLeft} / ${gameState.maxWrong}`;
+}
+
     
     gameState.guessedLetters = [];
     gameState.wrongGuesses = 0;
